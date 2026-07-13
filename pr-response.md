@@ -40,11 +40,24 @@ exception and that only one database row remains.
 
 ## Comment 3 — Missing test
 
-**What I did:** Pending. I will add `tests/test_watchlist.py` with a test that
-confirms `add_to_watchlist()` raises `FilmNotFoundError` when the supplied film
-ID is not present in the database.
+**What I did:** I created `tests/test_watchlist.py` using the isolated in-memory
+application, database setup, and fixture structure from `tests/test_collection.py`.
+The required test passes an all-zero UUID that is absent from the database and
+asserts that `add_to_watchlist()` raises `FilmNotFoundError`, rather than
+allowing a database integrity error to occur.
 
-**How I verified:** Pending until the test is written and run.
+**How I verified:** I used
+`test_add_to_collection_nonexistent_film_raises` as the direct model. Running
+`python -m pytest tests/test_watchlist.py -v` passed both watchlist tests, and
+running `python -m pytest tests/ -v` passed all six project tests.
+
+## Stretch — Duplicate watchlist test
+
+I added a second watchlist test for duplicate additions because deduplication
+is the new behavior introduced in response to Comment 2 and was otherwise not
+covered by the starter suite. The test adds the same film twice, expects
+`AlreadyInWatchlistError` on the second call, and confirms that exactly one
+`WatchlistEntry` remains in the database.
 
 ## Comment 4 — Default visibility
 
