@@ -25,12 +25,18 @@ service definition, route import, and route call. I then ran
 
 ## Comment 2 — Deduplication
 
-**What I did:** Pending. I will follow the `add_to_collection()` pattern to
-check for an existing `WatchlistEntry` with the same `user_id` and `film_id`
-before creating a new entry, and raise a watchlist-specific error when a
-duplicate is found.
+**What I did:** I followed the `add_to_collection()` pattern by querying for an
+existing `WatchlistEntry` with the same `user_id` and `film_id` after validating
+that the film exists but before creating a new entry. If a match is found,
+`add_to_watchlist()` raises the watchlist-specific
+`AlreadyInWatchlistError`. This makes duplicate handling explicit and prevents
+the second insert and commit from running.
 
-**How I verified:** Pending until the implementation is complete.
+**How I verified:** I compared the order and query fields against
+`add_to_collection()` and ran the full existing test suite after the change;
+all four tests passed. I also added a focused duplicate-add test in the
+watchlist test commit, which calls the function twice and verifies both the
+exception and that only one database row remains.
 
 ## Comment 3 — Missing test
 
