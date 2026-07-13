@@ -8,6 +8,7 @@ from services.collection_service import FilmNotFoundError
 from services.watchlist_service import (
     AlreadyInWatchlistError,
     add_to_watchlist,
+    get_watchlist,
 )
 
 
@@ -66,3 +67,35 @@ def test_add_to_watchlist_duplicate_raises(app, sample_user, sample_film):
             user_id=sample_user, film_id=sample_film
         ).count()
         assert count == 1
+
+
+def test_get_watchlist_returns_newest_first(app, sample_user):
+    """The most recently added watchlist film should be returned first."""
+    with app.app_context():
+        from datetime import datetime, timedelta, timezone
+
+        earlier_film = Film(title="Arrival", year=2016, genre="Sci-Fi")
+        later_film = Film(title="Zodiac", year=2007, genre="Thriller")
+        db.session.add_all([earlier_film, later_film])
+        db.session.commit()
+
+        earlier = datetime.now(timezone.utc) - timedelta(days=5)
+        later = datetime.now(timezone.utc)
+        db.session.add_all([
+            WatchlistEntry(
+                user_id=sample_user,
+                film_id=earlier_film.id,
+                date_added=earlier,
+            ),
+            WatchlistEntry(
+                user_id=sample_user,
+                film_id=later_film.id,
+                date_added=later,
+            ),
+        ])
+        db.session.commit()
+
+        watchlist = get_watchlist(sample_user)
+        titles = [film["title"] for film in watchlist]
+
+        assert titles == ["Zodiac", "Arrival"]
