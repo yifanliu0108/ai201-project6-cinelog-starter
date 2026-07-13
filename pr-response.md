@@ -113,15 +113,112 @@ a useful future client option.
 
 ## Comment 6 — Rebase
 
-**What conflicted:** Pending until the feature branch is rebased on the updated
-`main` branch.
+**What conflicted:** I fetched my fork and rebased `feature/watchlist` onto
+`origin/main`. Git reported an add/add conflict in `.gitignore` because both
+branches had introduced the file. The more important semantic conflict was in
+the model state: main's refactor migrated `Film.id` and
+`CollectionEntry.film_id` to UUID strings and removed the pre-refactor
+`WatchlistEntry`, while the rebased watchlist service still imported and used
+that model. Its service and route documentation also still described film IDs
+as integers.
 
-**How I resolved it:** Pending.
+**How I resolved it:** For `.gitignore`, I kept the common generated-file rules
+and main's additional `.pytest_cache/` rule. I preserved main's UUID
+implementation and restored `WatchlistEntry` with a UUID primary key and a
+`db.String(36)` UUID foreign key to `film.id`; I did not restore the old integer
+column. I retained the Film-to-watchlist relationship needed by
+`get_watchlist()` and updated the service and route documentation to describe a
+UUID string payload.
 
-**How I verified no conflict remains:** Pending.
+**How I verified no conflict remains:** I searched for conflict markers and
+stale integer watchlist documentation, confirmed that `origin/main` is an
+ancestor of the feature branch, and checked `git log --merges origin/main..HEAD`
+for feature-branch merge commits. I also ran the complete test suite against
+the rebased code; all seven tests passed, including watchlist creation,
+deduplication, nonexistent UUID handling, and newest-first ordering.
 
 ## PR Description
 
-Pending final completion. The final description will summarize the watchlist
-feature, the visibility and sort-order decisions, the rebase and UUID conflict
-resolution, and the manual and automated verification steps.
+### Feature overview
+
+This PR adds a watchlist service and REST endpoints that let a user save films
+for later and retrieve their saved films. It validates film UUIDs, prevents a
+user from adding the same film twice, returns film metadata with watchlist
+metadata, and includes focused service tests for missing films, duplicates, and
+sort order. The branch is rebased onto the UUID-based main branch.
+
+### Design decisions
+
+- **Visibility:** Watchlist entries retain `public=True` as the documented
+  default to support low-friction sharing and recommendations in CineLog's
+  community context. I acknowledge that viewing preferences can be sensitive;
+  an explicit visibility control should be added so users can easily opt out.
+- **Sort order:** Watchlists now default to `date_added` descending. This treats
+  the watchlist as a queue of current viewing intent and matches the existing
+  newest-first collection behavior. Alphabetical sorting remains a useful
+  future search or client-side option.
+
+### Manual testing
+
+1. Create and activate the environment, install dependencies, and initialize
+   the database:
+
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate
+   python -m pip install -r requirements.txt
+   flask --app app:create_app shell
+   ```
+
+2. In the Flask shell, create a user and two films, then copy the printed UUIDs:
+
+   ```python
+   from app import db
+   from models import Film, User
+
+   user = User(username="manual-user", email="manual@example.com")
+   film_one = Film(title="Arrival", year=2016, genre="Sci-Fi")
+   film_two = Film(title="Moonlight", year=2016, genre="Drama")
+   db.session.add_all([user, film_one, film_two])
+   db.session.commit()
+   print(user.id, film_one.id, film_two.id)
+   exit()
+   ```
+
+3. Start the API in one terminal:
+
+   ```bash
+   python app.py
+   ```
+
+4. In another terminal, add each film using the UUIDs printed above:
+
+   ```bash
+   curl -X POST http://127.0.0.1:5000/watchlist/<USER_UUID>/add \
+     -H "Content-Type: application/json" \
+     -d '{"film_id":"<FILM_ONE_UUID>"}'
+
+   curl -X POST http://127.0.0.1:5000/watchlist/<USER_UUID>/add \
+     -H "Content-Type: application/json" \
+     -d '{"film_id":"<FILM_TWO_UUID>"}'
+   ```
+
+5. Retrieve the watchlist and confirm the second film is first because it was
+   added most recently:
+
+   ```bash
+   curl http://127.0.0.1:5000/watchlist/<USER_UUID>
+   ```
+
+6. Run the automated verification:
+
+   ```bash
+   python -m pytest tests/ -v
+   ```
+
+   Expected result: all seven tests pass.
+
+## Commit history screenshot
+
+The final `git log --oneline origin/main..HEAD` screenshot is included below
+after the history cleanup.
