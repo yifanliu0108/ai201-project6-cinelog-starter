@@ -12,6 +12,9 @@ scanability benefit of alphabetical ordering; I incorporated those as explicit
 tradeoffs rather than treating either decision as cost-free. The final
 positions are grounded in CineLog's community focus, the fields actually
 returned by `get_watchlist()`, and the existing newest-first collection order.
+During the final history review, Codex confirmed the conventional prefixes but
+flagged one film-retrieval commit message as overly long; I shortened it to
+`fix: use session-based film retrieval` with a second interactive rebase.
 
 ## Comment 1 — Rename
 
@@ -222,3 +225,5 @@ sort order. The branch is rebased onto the UUID-based main branch.
 
 The final `git log --oneline origin/main..HEAD` screenshot is included below
 after the history cleanup.
+
+![Final conventional commit history](git-log.png)
