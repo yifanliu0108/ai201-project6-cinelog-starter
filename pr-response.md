@@ -4,10 +4,14 @@
 
 I used Codex as an orientation and verification aid while working through the
 review. It helped me understand the repository structure, interpret the
-existing collection-service and test patterns, navigate Git and VS Code, and
-check the working tree and test results. I verified its explanations against
-the source code. I will make the product decisions for Comments 4 and 5 myself
-and update this section at the end with any additional AI use.
+existing collection-service and test patterns, navigate Git and VS Code, run
+the test suite, and check the commit history. I verified its explanations
+against the source code. I also used it to stress-test the reasoning for
+Comments 4 and 5. It raised the privacy cost of a public default and the
+scanability benefit of alphabetical ordering; I incorporated those as explicit
+tradeoffs rather than treating either decision as cost-free. The final
+positions are grounded in CineLog's community focus, the fields actually
+returned by `get_watchlist()`, and the existing newest-first collection order.
 
 ## Comment 1 — Rename
 
@@ -61,21 +65,51 @@ covered by the starter suite. The test adds the same film twice, expects
 
 ## Comment 4 — Default visibility
 
-**My position:** Pending — I will make and document this design decision after
-finishing Comments 1–3.
+**My position:** Keep `public=True` as the default, but treat an explicit
+visibility control as an important follow-up rather than assuming all users are
+comfortable sharing indefinitely.
 
-**Reasoning:** Pending.
+**Reasoning:** CineLog is a community film-tracking application, and a
+watchlist has social value when friends can discover shared interests and make
+recommendations. A public default makes that value available without requiring
+every new user to understand and configure a visibility setting first. The
+current watchlist response exposes film information, the date added, and the
+visibility flag; it does not expose private notes or ratings. For this product,
+I am optimizing for low-friction discovery and useful profiles while keeping
+the default consistent with the model already introduced by this feature.
 
-**Tradeoff acknowledged:** Pending.
+**Tradeoff acknowledged:** A watchlist can still reveal personal interests, so
+public-by-default has a real consent and privacy cost even without notes or
+ratings. A private default would better protect users who never inspect their
+settings, at the cost of making CineLog's community features feel empty. The
+current add endpoint also does not expose the existing `public` field, which
+makes the public default harder to override than it should be. A follow-up
+should clearly communicate visibility and allow callers to choose it when an
+entry is created; until then, the default must be documented rather than
+treated as accidental behavior.
 
 ## Comment 5 — Sort order
 
-**My position:** Pending — I will make and document this design decision after
-finishing Comments 1–3.
+**My position:** I accepted the maintainer's preference and changed the default
+watchlist order from alphabetical to `date_added` descending (newest first).
 
-**Reasoning:** Pending.
+**Reasoning:** A CineLog watchlist represents future intent rather than an
+archival catalog. The films a user added most recently are likely to reflect
+what they currently want to watch, so surfacing them first reduces the effort
+needed to choose something. Newest-first also matches `get_collection()`, which
+already orders entries by `date_added` descending, giving the two user-film
+lists a consistent time-oriented default. I updated the query, documented the
+behavior in its docstring, and added a test with deliberately non-alphabetical
+titles to prove that timestamps—not titles—control the result.
 
-**Engagement with reviewer's point:** Pending.
+**Engagement with reviewer's point:** The reviewer is right that recent intent
+is the stronger default for the common "what did I just save?" workflow.
+Alphabetical order remains easier when a user remembers a title and wants to
+scan a long list, and it is deterministic even when timestamps are close. On
+balance, that lookup benefit is better handled by search or an explicit sort
+option than by making every user lose recency as the default. I therefore
+changed the server response to newest-first while recognizing alphabetical as
+a useful future client option.
 
 ## Comment 6 — Rebase
 
